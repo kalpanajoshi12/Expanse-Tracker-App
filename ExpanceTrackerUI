@@ -1,0 +1,209 @@
+package com.myapplication;
+
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+class Expances{
+    private String  description;
+    private double amount;
+    private String category;
+    JLabel view = new JLabel();
+    public Expances(String description,double amount,String category){
+        this.description = description;
+        this.amount = amount;
+        this.category = category;
+    }
+    public String getDescription(){
+        return description;
+    }
+    public double getAmount (){
+        return amount;
+    }
+    public String getCategory(){
+        return category;
+    }
+}
+class ExpanceTracker {
+    private Map<String, List<Expances>> expancesBycategory;
+
+    public ExpanceTracker() {
+        expancesBycategory = new HashMap<>();
+    }
+
+    public void addExpanse(String description, double amount, String category) {
+        Expances expances = new Expances(description, amount, category);
+
+        if (!expancesBycategory.containsKey(category)) {
+            expancesBycategory.put(category, new ArrayList<>());
+        }
+        expancesBycategory.get(category).add(expances);
+    }
+
+    public void clearExpanses() {
+        expancesBycategory.clear();
+    }
+
+    public Map<String, List<Expances>> getExpancesBycategory() {
+        return expancesBycategory;
+    }
+
+    public double gettotalExpansesForCategory(String category) {
+        if (expancesBycategory.containsKey(category)) {
+            List<Expances> expances = expancesBycategory.get(category);
+            return expances.stream().mapToDouble(Expances::getAmount).sum();
+        }
+        return 0;
+    }
+
+    public String getRecentExpensesDescription() {
+        StringBuilder sb = new StringBuilder();
+        int count = 0;
+
+
+
+        for (List<Expances> expancesList : expancesBycategory.values()) {
+            for (Expances expances : expancesList) {
+
+                sb.append("Description: ").append(expances.getDescription())
+                        .append(", Amount: ").append(expances.getAmount())
+                        .append(", category: ").append(expances.getCategory()).append("\n ");
+                count++;
+                if (count >= 5) {
+                    return sb.toString();
+                }
+            }
+        }
+        return sb.toString();
+    }
+}
+public class ExpanceTrackerUI extends JFrame {
+
+private ExpanceTracker tracker;
+private JTextArea recentExpanseTextArea;
+public ExpanceTrackerUI(){
+    tracker = new ExpanceTracker();
+
+    setTitle("Expanse Tracker ");
+    setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    setLayout(new BorderLayout());
+
+    JPanel topPanel = new JPanel();
+    topPanel.setLayout(new FlowLayout());
+
+    JButton addExpensebtn = new JButton("Add Expanse");
+    addExpensebtn.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            String description = JOptionPane.showInputDialog("Enter Expanse: ");
+            double amount = Double.parseDouble(JOptionPane.showInputDialog("Enter expanse amount: "));
+            String category = JOptionPane.showInputDialog("Enter expanse category: ");
+
+            tracker.addExpanse(description, amount, category);
+            JOptionPane.showInputDialog(null,"Expanse added successfully");
+            updateRecentExpensesTextArea();
+        }
+    });
+    topPanel.add(addExpensebtn);
+
+
+    JButton viewExpanseBtn = new JButton("View Expanses");
+    viewExpanseBtn.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            Map<String , List<Expances>> expanses = tracker.getExpancesBycategory();
+            if(expanses.isEmpty()){
+                JOptionPane.showMessageDialog(null,"NO Expenses recorded!");
+            }else{
+                StringBuilder sb = new StringBuilder();
+                for(String category : expanses.keySet()){
+                    sb.append("Category: ").append(category).append("\n");
+                    List<Expances> categoryExpenses = expanses.get(category);
+                    for(Expances expances: categoryExpenses){
+                        sb.append("Description: ").append(expances.getDescription())
+                                .append(",Amount: ").append(expances.getAmount())
+                                .append(", Category: ").append(expances.getCategory());
+                    }
+
+                    sb.append("\n");
+                    System.out.println();
+
+                }
+
+                JOptionPane.showMessageDialog(null,sb.toString());
+            }
+        }
+    });
+    topPanel.add(viewExpanseBtn);
+
+
+    JButton expenseSummarybtn = new JButton("Expanse Summary");
+    expenseSummarybtn.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            String category = JOptionPane.showInputDialog("Enter Category for expanse summary");
+            double total = tracker.gettotalExpansesForCategory(category);
+            if(total>0) {
+                JOptionPane.showMessageDialog(null, "total expanses for category " + category + ": " + total);
+            }else{
+                JOptionPane.showMessageDialog(null,"NO Expenses recorded for this category");
+            }
+        }
+    });
+    topPanel.add(expenseSummarybtn);
+
+    JButton clearExpensebtn = new JButton("clear Expanses");
+    clearExpensebtn.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            tracker.clearExpanses();
+            JOptionPane.showMessageDialog(null,"ALL Expenses Cleared! ");
+            updateRecentExpensesTextArea();
+        }
+    });
+    topPanel.add(clearExpensebtn);
+
+    add(topPanel,BorderLayout.NORTH);
+
+    recentExpanseTextArea = new JTextArea(10,30);
+    recentExpanseTextArea.setEnabled(false);
+
+    JScrollPane scrollPane = new JScrollPane(recentExpanseTextArea);
+    scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+    updateRecentExpensesTextArea();
+    add(scrollPane, BorderLayout.CENTER);
+
+    JButton exitbtn = new JButton("Exit");
+    exitbtn.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            tracker = null;
+            System.exit(0);
+        }
+    });
+    add(exitbtn, BorderLayout.SOUTH);
+
+    pack();
+    setLocationRelativeTo(null);
+    setVisible(true);
+}
+
+private  void updateRecentExpensesTextArea(){
+    recentExpanseTextArea.setText(tracker.getRecentExpensesDescription());
+}
+
+public static void main(String[] args) {
+   SwingUtilities.invokeLater(new Runnable() {
+       @Override
+       public void run() {
+           new ExpanceTrackerUI();
+       }
+   });
+    }
+}
